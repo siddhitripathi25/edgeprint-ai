@@ -5,7 +5,7 @@
 import type { StatusResponse, MetricsData, LogEntry, ModelInfo } from "@/types";
 import { getSimulatedState, setSimulatedState, addSimulatedLog } from "./mock-data";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://edgeprint-ai-2.onrender.com";
 
 // Fast check to see if FastAPI is alive
 let isAlive = false;
