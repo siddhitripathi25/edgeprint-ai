@@ -222,7 +222,6 @@ export default function LiveCameraFeed() {
       addSimulatedLog("info", "Waiting", "ROI viewport cleared; awaiting hand landmark registration");
     }
   };
-
   return (
     <GlowCard glowColor="cyan" className="overflow-hidden">
       <div className="p-4">
@@ -234,7 +233,11 @@ export default function LiveCameraFeed() {
           <div className="flex items-center gap-2">
             {isBackendConnected && (
               <button
-                onClick={() => setUseCloudStream(!useCloudStream)}
+                onClick={() => {
+                  const nextVal = !useCloudStream;
+                  setUseCloudStream(nextVal);
+                  setSimulatedState({ useCloudStream: nextVal });
+                }}
                 className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded border transition-all ${
                   useCloudStream
                     ? "bg-purple-500/20 text-purple-400 border-purple-500/40"

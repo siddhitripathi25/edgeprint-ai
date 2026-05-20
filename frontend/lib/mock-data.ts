@@ -11,6 +11,7 @@ export interface SimulatedState {
   logs: LogEntry[];
   modelInfo: ModelInfo;
   isBackendConnected: boolean;
+  useCloudStream: boolean;
 }
 
 // Initial state
@@ -44,6 +45,7 @@ const initialState: SimulatedState = {
     status: "ready",
   },
   isBackendConnected: false,
+  useCloudStream: true,
 };
 
 // Global singleton for client-side state

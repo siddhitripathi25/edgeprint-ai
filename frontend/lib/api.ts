@@ -78,6 +78,15 @@ export async function getStatus(): Promise<StatusResponse> {
 
 // --- GET /metrics ---
 export async function getMetrics(): Promise<MetricsData> {
+  const state = getSimulatedState();
+  
+  // If cloud stream is active, the real-time frame processing loop dispatches frame response metrics
+  // directly into the local state store. We return this immediately to prevent overwriting
+  // live metrics with 0.0 values from stale poll requests hitting isolated backend worker threads.
+  if (state.useCloudStream) {
+    return state.metrics;
+  }
+
   const connected = isAlive;
   if (connected) {
     try {
