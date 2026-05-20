@@ -22,7 +22,7 @@ export default function AntiSpoofPanel() {
           <p className="text-[11px] text-gray-500">Real-time computer vision metrics</p>
         </div>
 
-        <div className="flex rounded-lg border border-[#1a2744] bg-[#07090f] p-0.5">
+        <div className="flex flex-wrap gap-1 rounded-lg border border-[#1a2744] bg-[#07090f] p-1">
           {[
             { id: "liveness", label: "Liveness Check", icon: Activity },
             { id: "motion", label: "Motion Trend", icon: BarChart3 },
@@ -34,10 +34,10 @@ export default function AntiSpoofPanel() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as Tab)}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider transition-all ${
+                className={`flex items-center gap-2 rounded-md px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
                   active
-                    ? "bg-cyan-500/10 text-cyan-400 shadow-[inset_0_0_0_1px_rgba(0,245,255,0.15)]"
-                    : "text-gray-500 hover:text-gray-300"
+                    ? "bg-cyan-500/10 text-cyan-400 shadow-[inset_0_0_0_1px_rgba(0,245,255,0.25)]"
+                    : "text-gray-500 hover:bg-white/[0.02] hover:text-gray-300"
                 }`}
               >
                 <Icon className="h-3 w-3" />

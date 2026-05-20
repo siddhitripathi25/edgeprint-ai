@@ -5,7 +5,16 @@
 import type { StatusResponse, MetricsData, LogEntry, ModelInfo } from "@/types";
 import { getSimulatedState, setSimulatedState, addSimulatedLog } from "./mock-data";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://edgeprint-ai-2.onrender.com";
+export let BASE_URL = "https://edgeprint-ai-2.onrender.com";
+
+if (typeof window !== "undefined") {
+  const hostname = window.location.hostname;
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.")) {
+    BASE_URL = "http://localhost:8000";
+  } else if (process.env.NEXT_PUBLIC_API_URL) {
+    BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+  }
+}
 
 // Fast check to see if FastAPI is alive
 let isAlive = false;

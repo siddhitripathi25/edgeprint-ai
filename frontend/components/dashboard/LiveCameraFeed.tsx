@@ -5,14 +5,14 @@ import { motion } from "framer-motion";
 import { Camera, Radio, Maximize2, Video, VideoOff, ShieldAlert, ShieldCheck } from "lucide-react";
 import GlowCard from "@/components/ui/GlowCard";
 import { getSimulatedState, setSimulatedState, addSimulatedLog } from "@/lib/mock-data";
-import { predictFrame } from "@/lib/api";
+import { predictFrame, BASE_URL } from "@/lib/api";
 import type { VerificationStatus } from "@/types";
 
 export default function LiveCameraFeed() {
   const [status, setStatus] = useState<VerificationStatus>("WAITING_FOR_HAND");
   const [cameraActive, setCameraActive] = useState(false);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
-  const [useCloudStream, setUseCloudStream] = useState(false);
+  const [useCloudStream, setUseCloudStream] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -277,7 +277,7 @@ export default function LiveCameraFeed() {
           {cameraActive && (
             isBackendConnected && !useCloudStream ? (
               <img
-                src="http://localhost:8000/video_feed"
+                src={`${BASE_URL}/video_feed`}
                 className="absolute inset-0 h-full w-full object-cover opacity-90"
                 alt="FastAPI OpenCV Hand Tracking Stream"
               />
