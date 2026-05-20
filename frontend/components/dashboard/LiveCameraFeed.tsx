@@ -5,12 +5,14 @@ import { motion } from "framer-motion";
 import { Camera, Radio, Maximize2, Video, VideoOff, ShieldAlert, ShieldCheck } from "lucide-react";
 import GlowCard from "@/components/ui/GlowCard";
 import { getSimulatedState, setSimulatedState, addSimulatedLog } from "@/lib/mock-data";
+import { predictFrame } from "@/lib/api";
 import type { VerificationStatus } from "@/types";
 
 export default function LiveCameraFeed() {
   const [status, setStatus] = useState<VerificationStatus>("WAITING_FOR_HAND");
   const [cameraActive, setCameraActive] = useState(false);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
+  const [useCloudStream, setUseCloudStream] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -20,8 +22,8 @@ export default function LiveCameraFeed() {
       const state = getSimulatedState();
       setStatus(state.status);
       
-      // Release browser camera lock if backend is connected
-      if (state.isBackendConnected && streamRef.current) {
+      // Release browser camera lock if backend is connected and not cloud-streaming
+      if (state.isBackendConnected && !useCloudStream && streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
@@ -32,7 +34,81 @@ export default function LiveCameraFeed() {
     handleStateChange(); // initial load
     window.addEventListener("edgeprint_state_change", handleStateChange);
     return () => window.removeEventListener("edgeprint_state_change", handleStateChange);
-  }, []);
+  }, [useCloudStream]);
+
+  // Restart camera when stream mode toggles
+  useEffect(() => {
+    if (cameraActive) {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      setCameraActive(false);
+    }
+  }, [useCloudStream]);
+
+  // Hidden frame capture & send loop for Cloud Stream Mode
+  useEffect(() => {
+    if (!cameraActive || !useCloudStream || !isBackendConnected) return;
+    
+    const canvas = document.createElement("canvas");
+    canvas.width = 640;
+    canvas.height = 360;
+    const ctx = canvas.getContext("2d");
+    
+    let active = true;
+    
+    const sendFrame = async () => {
+      if (!active || !videoRef.current || !ctx) return;
+      
+      try {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const base64Data = canvas.toDataURL("image/jpeg", 0.6);
+        
+        const res = await predictFrame(base64Data, "user1");
+        
+        if (res.success && active) {
+          setSimulatedState((prev) => {
+            const isSpoof = res.prediction.includes("SPOOF");
+            const isProcessing = res.prediction === "PROCESSING";
+            
+            let nextStatus: VerificationStatus = "WAITING_FOR_HAND";
+            if (isProcessing) nextStatus = "PROCESSING";
+            else if (isSpoof) nextStatus = "SPOOF_DETECTED";
+            else if (res.hand_detected) nextStatus = "REAL_USER_VERIFIED";
+            
+            return {
+              ...prev,
+              status: nextStatus,
+              metrics: {
+                motionScore: res.motion_score,
+                blurScore: res.blur_score,
+                fingerMovement: res.hand_detected ? 90.0 : 0.0,
+                validFrames: res.hand_detected ? Math.min(prev.metrics.validFrames + 1, 30) : 0,
+                confidenceScore: res.confidence,
+                predictionLabel: res.prediction,
+                timestamp: new Date().toLocaleTimeString()
+              }
+            };
+          });
+          window.dispatchEvent(new Event("edgeprint_state_change"));
+        }
+      } catch (err) {
+        console.error("Cloud frame stream error:", err);
+      }
+      
+      if (active) {
+        setTimeout(sendFrame, 200); // 5 FPS
+      }
+    };
+    
+    const delayId = setTimeout(sendFrame, 1000);
+    
+    return () => {
+      active = false;
+      clearTimeout(delayId);
+    };
+  }, [cameraActive, useCloudStream, isBackendConnected]);
 
 
   // Handle webcam start / stop
@@ -47,7 +123,7 @@ export default function LiveCameraFeed() {
       }
       addSimulatedLog("info", "Webcam Disabled", "Camera feed stopped by operator");
     } else {
-      if (isBackendConnected) {
+      if (isBackendConnected && !useCloudStream) {
         setCameraActive(true);
         addSimulatedLog("info", "Webcam Enabled", "Connected to Python/FastAPI camera pipeline");
         return;
@@ -103,6 +179,21 @@ export default function LiveCameraFeed() {
             <span className="text-sm font-semibold text-white">Live Camera Feed</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Cloud Stream Toggle */}
+            {isBackendConnected && (
+              <button
+                onClick={() => setUseCloudStream(!useCloudStream)}
+                className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded border transition-all ${
+                  useCloudStream
+                    ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+                    : "bg-gray-500/10 text-gray-400 border-gray-500/20 hover:text-white"
+                }`}
+                title="Process frames in browser (Cloud Deployment Mode)"
+              >
+                {useCloudStream ? "CLOUD STREAM ON" : "LOCAL CAMERA HARDWARE"}
+              </button>
+            )}
+
             {/* Connection mode */}
             <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded border ${
               isBackendConnected 
@@ -140,7 +231,7 @@ export default function LiveCameraFeed() {
         <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-cyan-500/20 bg-[#030a14]">
           {/* Real video element or Backend MJPEG stream */}
           {cameraActive && (
-            isBackendConnected ? (
+            isBackendConnected && !useCloudStream ? (
               <img
                 src="http://localhost:8000/video_feed"
                 className="absolute inset-0 h-full w-full object-cover opacity-90"

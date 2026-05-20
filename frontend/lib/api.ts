@@ -219,7 +219,38 @@ export async function startTraining(): Promise<{ success: boolean; message: stri
   };
 }
 
+// --- POST /predict-frame ---
+export async function predictFrame(imageBase64: string, label: string = "user1"): Promise<{
+  success: boolean;
+  hand_detected: boolean;
+  prediction: string;
+  confidence: number;
+  blur_score: number;
+  motion_score: number;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`${BASE_URL}/predict-frame`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: imageBase64, label }),
+    });
+    return res.json();
+  } catch (e: any) {
+    return {
+      success: false,
+      hand_detected: false,
+      prediction: "UNKNOWN",
+      confidence: 0.0,
+      blur_score: 0.0,
+      motion_score: 0.0,
+      error: e.message || "Failed to reach server",
+    };
+  }
+}
+
 // --- POST /predict ---
+
 export async function predictUser(): Promise<{ prediction: string; confidence: number }> {
   const connected = isAlive;
   if (connected) {
