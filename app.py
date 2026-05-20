@@ -9,6 +9,8 @@ from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 import uvicorn
+from pydantic import BaseModel
+import base64
 
 app = FastAPI(title="EdgePrint AI Anti-Spoof Backend")
 
@@ -307,6 +309,79 @@ def clear_dataset_endpoint():
 @app.get("/video_feed")
 def video_feed():
     return StreamingResponse(gen_frames(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+class FrameData(BaseModel):
+    image: str  # Base64 string of the image frame from browser
+    label: str = "user1"
+
+@app.post("/predict-frame")
+def predict_frame(data: FrameData):
+    global valid_frames, motion_score, blur_score, finger_move, prediction_label, confidence_score, save_data, current_label, model
+    try:
+        # Strip header if present
+        if "," in data.image:
+            header, encoded = data.image.split(",", 1)
+        else:
+            encoded = data.image
+            
+        decoded = base64.b64decode(encoded)
+        np_arr = np.frombuffer(decoded, np.uint8)
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        if frame is None:
+            return {"success": False, "error": "Invalid image data"}
+            
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        blur_val = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        current_motion = 5.0
+        
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = hands.process(rgb)
+        
+        hand_detected = False
+        pred_label = "WAITING"
+        conf = 0.0
+        
+        if results.multi_hand_landmarks:
+            hand_detected = True
+            for handLms in results.multi_hand_landmarks:
+                template = []
+                base_x = handLms.landmark[0].x
+                base_y = handLms.landmark[0].y
+                
+                for idx in [4, 8, 12, 16, 20]:
+                    lm = handLms.landmark[idx]
+                    template.append(lm.x - base_x)
+                    template.append(lm.y - base_y)
+                    
+                if blur_val < 60:
+                    pred_label = "SPOOF_BLUR"
+                    conf = 99.0
+                else:
+                    if model is not None:
+                        try:
+                            prediction = model.predict([template])[0]
+                            pred_label = str(prediction)
+                            if hasattr(model, "predict_proba"):
+                                conf = float(max(model.predict_proba([template])[0]) * 100)
+                            else:
+                                conf = 100.0
+                        except Exception as e:
+                            pred_label = "UNKNOWN"
+                            conf = 0.0
+                    else:
+                        pred_label = "UNTRAINED"
+                        conf = 0.0
+        
+        return {
+            "success": True,
+            "hand_detected": hand_detected,
+            "prediction": pred_label,
+            "confidence": conf,
+            "blur_score": blur_val,
+            "motion_score": current_motion
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=False)
