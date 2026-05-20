@@ -10,15 +10,17 @@ import {
   Tag,
 } from "lucide-react";
 import MetricCard from "./MetricCard";
-import { getMetrics } from "@/lib/api";
-import type { MetricsData } from "@/types";
+import { getMetrics, getStatus } from "@/lib/api";
+import type { MetricsData, VerificationStatus } from "@/types";
 import { mockMetrics } from "@/lib/mock-data";
 
 export default function MetricsGrid() {
   const [metrics, setMetrics] = useState<MetricsData>(mockMetrics);
+  const [status, setStatus] = useState<VerificationStatus>("WAITING_FOR_HAND");
 
   useEffect(() => {
     const handleStateChange = () => {
+      getStatus().then((res) => setStatus(res.status)).catch(console.error);
       getMetrics().then(setMetrics).catch(console.error);
     };
 
@@ -33,7 +35,7 @@ export default function MetricsGrid() {
     };
   }, []);
 
-  const isHandPlaced = metrics.predictionLabel !== "WAITING";
+  const isHandPlaced = status !== "WAITING_FOR_HAND";
 
   const cards = [
     {
