@@ -32,9 +32,14 @@ prediction_label = "WAITING"
 confidence_score = 0.0
 save_data = False
 current_label = "user1"
-camera_active = False
+# Headless cloud stream state variables
+predict_motion_history = []
+predict_blur_history = []
+predict_prev_gray = None
+predict_prev_x = 0
 
 # MediaPipe config
+
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
     max_num_hands=1,
@@ -317,6 +322,7 @@ class FrameData(BaseModel):
 @app.post("/predict-frame")
 def predict_frame(data: FrameData):
     global valid_frames, motion_score, blur_score, finger_move, prediction_label, confidence_score, save_data, current_label, model
+    global predict_motion_history, predict_blur_history, predict_prev_gray, predict_prev_x
     try:
         # Strip header if present
         if "," in data.image:
@@ -332,53 +338,105 @@ def predict_frame(data: FrameData):
             
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blur_val = float(cv2.Laplacian(gray, cv2.CV_64F).var())
-        current_motion = 5.0
+        
+        # Calculate frame differencing motion score
+        current_motion = 0.0
+        if predict_prev_gray is not None:
+            if predict_prev_gray.shape == gray.shape:
+                diff = cv2.absdiff(gray, predict_prev_gray)
+                current_motion = float(np.mean(diff))
+        predict_prev_gray = gray
         
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = hands.process(rgb)
         
         hand_detected = False
-        pred_label = "WAITING"
-        conf = 0.0
-        
         if results.multi_hand_landmarks:
             hand_detected = True
             for handLms in results.multi_hand_landmarks:
+                valid_frames += 1
+                
+                # Update global metrics for REST polling
+                motion_score = current_motion
+                blur_score = blur_val
+                
+                # Finger movement delta
+                x = int(handLms.landmark[8].x * frame.shape[1])
+                if predict_prev_x > 0:
+                    finger_move = float(abs(x - predict_prev_x))
+                predict_prev_x = x
+                
+                predict_motion_history.append(current_motion)
+                predict_blur_history.append(blur_val)
+                if len(predict_motion_history) > 30:
+                    predict_motion_history.pop(0)
+                if len(predict_blur_history) > 30:
+                    predict_blur_history.pop(0)
+                
                 template = []
                 base_x = handLms.landmark[0].x
                 base_y = handLms.landmark[0].y
-                
                 for idx in [4, 8, 12, 16, 20]:
                     lm = handLms.landmark[idx]
                     template.append(lm.x - base_x)
                     template.append(lm.y - base_y)
-                    
-                if blur_val < 60:
-                    pred_label = "SPOOF_BLUR"
-                    conf = 99.0
+                
+                if save_data:
+                    row = template + [current_label]
+                    with open("dataset.csv", "a", newline="") as f:
+                        writer = csv.writer(f)
+                        writer.writerow(row)
+                    save_data = False
+                
+                # Accumulate 30 frames before classification
+                if valid_frames < 30:
+                    prediction_label = "PROCESSING"
+                    confidence_score = 0.0
                 else:
-                    if model is not None:
-                        try:
-                            prediction = model.predict([template])[0]
-                            pred_label = str(prediction)
-                            if hasattr(model, "predict_proba"):
-                                conf = float(max(model.predict_proba([template])[0]) * 100)
-                            else:
-                                conf = 100.0
-                        except Exception as e:
-                            pred_label = "UNKNOWN"
-                            conf = 0.0
+                    avg_motion = sum(predict_motion_history) / len(predict_motion_history) if predict_motion_history else 0.0
+                    avg_blur = sum(predict_blur_history) / len(predict_blur_history) if predict_blur_history else 0.0
+                    
+                    if avg_blur < 60:
+                        prediction_label = "SPOOF_BLUR"
+                        confidence_score = 99.0
+                    elif avg_motion < 0.5:
+                        prediction_label = "SPOOF_STATIC"
+                        confidence_score = 99.5
                     else:
-                        pred_label = "UNTRAINED"
-                        conf = 0.0
-        
+                        if model is not None:
+                            try:
+                                prediction = model.predict([template])[0]
+                                prediction_label = str(prediction)
+                                if hasattr(model, "predict_proba"):
+                                    confidence_score = float(max(model.predict_proba([template])[0]) * 100)
+                                else:
+                                    confidence_score = 100.0
+                            except Exception as e:
+                                prediction_label = "UNKNOWN"
+                                confidence_score = 0.0
+                        else:
+                            prediction_label = "UNTRAINED"
+                            confidence_score = 0.0
+        else:
+            valid_frames = 0
+            predict_motion_history.clear()
+            predict_blur_history.clear()
+            predict_prev_x = 0
+            finger_move = 0.0
+            prediction_label = "WAITING"
+            confidence_score = 0.0
+            motion_score = 0.0
+            blur_score = blur_val
+            
         return {
             "success": True,
             "hand_detected": hand_detected,
-            "prediction": pred_label,
-            "confidence": conf,
-            "blur_score": blur_val,
-            "motion_score": current_motion
+            "prediction": prediction_label,
+            "confidence": confidence_score,
+            "blur_score": blur_score,
+            "motion_score": motion_score,
+            "finger_movement": finger_move,
+            "valid_frames": valid_frames
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
