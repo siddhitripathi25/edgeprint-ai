@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+:root {
+  --background: 222 84% 5%;
+  --foreground: 210 40% 98%;
+  --card: 222 84% 8%;
+  --card-foreground: 210 40% 98%;
+  --border: 217 32% 17%;
+  --input: 217 32% 17%;
+  --ring: 186 100% 50%;
+  --primary: 186 100% 50%;
+  --primary-foreground: 222 84% 5%;
+  --secondary: 217 32% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 32% 12%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 271 81% 56%;
+  --accent-foreground: 210 40% 98%;
+
+  --neon-cyan: #00f5ff;
+  --electric-blue: #4d9fff;
+  --neon-purple: #a855f7;
+  --dark-bg: #030712;
+  --card-bg: #0a0f1e;
+  --card-elevated: #0d1526;
+  --border-color: #1a2744;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: var(--dark-bg);
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* Scrollbar Styles */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a0f1e; }
+::-webkit-scrollbar-thumb { background: #1a2744; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #00f5ff40; }
+
+/* Glassmorphism */
+.glass {
+  background: rgba(10, 15, 30, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 245, 255, 0.08);
+}
+
+.glass-elevated {
+  background: rgba(13, 21, 38, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 245, 255, 0.12);
+}
+
+/* Glow utilities */
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.3), 0 0 40px rgba(0, 245, 255, 0.1);
+}
+.glow-cyan-sm {
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+}
+.glow-blue {
+  box-shadow: 0 0 20px rgba(77, 159, 255, 0.4);
+}
+.glow-purple {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+}
+.glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+.glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+/* Neon text */
+.text-neon-cyan { color: var(--neon-cyan); }
+.text-neon-blue { color: var(--electric-blue); }
+.text-neon-purple { color: var(--neon-purple); }
+
+/* Grid background */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(0, 245, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Animated gradient border */
+@keyframes borderGlow {
+  0%, 100% { border-color: rgba(0, 245, 255, 0.3); }
+  50% { border-color: rgba(0, 245, 255, 0.8); }
+}
+
+@keyframes scanLine {
+  0% { top: 0%; }
+  100% { top: 100%; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 245, 255, 0.2); }
+  50% { box-shadow: 0 0 30px rgba(0, 245, 255, 0.6), 0 0 60px rgba(0, 245, 255, 0.2); }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Loading shimmer */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(26, 39, 68, 0.8) 25%,
+    rgba(0, 245, 255, 0.05) 50%,
+    rgba(26, 39, 68, 0.8) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Animated scan overlay for camera feed */
+.scan-overlay {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.8), transparent);
+  animation: scanLine 3s linear infinite;
+}
+
+/* Neon border animation */
+.border-neon {
+  border: 1px solid rgba(0, 245, 255, 0.3);
+  animation: borderGlow 2s ease-in-out infinite;
+}
+
+/* Selection */
+::selection {
+  background: rgba(0, 245, 255, 0.2);
+  color: #00f5ff;
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid rgba(0, 245, 255, 0.5);
+  outline-offset: 2px;
+}

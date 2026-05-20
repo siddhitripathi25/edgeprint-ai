@@ -4,6 +4,7 @@ import numpy as np
 import csv
 
 
+valid_frames = 0
 cap = cv2.VideoCapture(0)
 
 mp_hands = mp.solutions.hands
@@ -15,6 +16,8 @@ hands = mp_hands.Hands(
 mp_draw = mp.solutions.drawing_utils
 prev_gray = None
 motion_score = 0
+prev_x = 0
+finger_move = 0
 save_data = False
 while True:
     success, frame = cap.read()
@@ -62,6 +65,19 @@ while True:
             # =========================
             # TEMPLATE GENERATION
             # =========================
+            if blur_score > 100 and motion_score > 2:
+                valid_frames += 1
+            else:
+                valid_frames = 0
+            cv2.putText(frame, f"Valid Frames: {valid_frames}",
+                    (20, 240),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1, (0,255,0), 2)
+            if valid_frames > 30:
+                cv2.putText(frame, "REAL HAND VERIFIED",
+                            (20, 280),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            1, (0,255,0), 3)
 
             template = []
 
@@ -116,13 +132,46 @@ while True:
                         y1 = max(0, y - box)
                         x2 = min(w, x + box)
                         y2 = min(h, y + box)
+                        finger_move = abs(x - prev_x)
+                        prev_x = x
+                        cv2.putText(frame, f"Finger Move: {int(finger_move)}",
+                                (20, 320),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                1, (255,255,0), 2)
+                        if finger_move > 15:
+                            cv2.putText(frame, "LIVE MOVEMENT DETECTED",
+                                        (20, 360),
+                                        cv2.FONT_HERSHEY_SIMPLEX,
+                                        1, (0,255,255), 2)
+                        else:
+                            cv2.putText(frame, "NO LIVE FINGER MOVEMENT",
+                                        (20, 360),
+                                        cv2.FONT_HERSHEY_SIMPLEX,
+                                        1, (0,0,255), 2)
+                        is_real = (
+                            blur_score > 100 and
+                            motion_score > 2 and
+                            finger_move > 15 and
+                            valid_frames > 30
+                        )
+                        if is_real:
+                            cv2.putText(frame, "REAL USER VERIFIED",
+                                        (20, 420),
+                                        cv2.FONT_HERSHEY_SIMPLEX,
+                                        1, (0,255,0), 3)
+                        else:
+                            cv2.putText(frame, "FAKE / SPOOF DETECTED",
+                                        (20, 420),
+                                        cv2.FONT_HERSHEY_SIMPLEX,
+                                        1, (0,0,255), 3)
+
 
                         cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
                         # cv2.imshow("Finger ROI", finger_roi)
+    else:
+        valid_frames = 0
+        finger_move = 0
     cv2.imshow("EdgePrint AI - Hand Tracking", frame)
-
-    if cv2.waitKey(1) == 27:
-        break
 
     key = cv2.waitKey(1)
 
