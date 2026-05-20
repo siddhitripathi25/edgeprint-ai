@@ -18,74 +18,84 @@ export default function MetricsGrid() {
   const [metrics, setMetrics] = useState<MetricsData>(mockMetrics);
 
   useEffect(() => {
-    // Initial fetch
-    getMetrics().then(setMetrics).catch(console.error);
-
-    // Poll every 2 seconds for live feel
-    const interval = setInterval(() => {
+    const handleStateChange = () => {
       getMetrics().then(setMetrics).catch(console.error);
-    }, 2000);
+    };
 
-    return () => clearInterval(interval);
+    handleStateChange();
+    window.addEventListener("edgeprint_state_change", handleStateChange);
+
+    const interval = setInterval(handleStateChange, 2000);
+
+    return () => {
+      window.removeEventListener("edgeprint_state_change", handleStateChange);
+      clearInterval(interval);
+    };
   }, []);
+
+  const isHandPlaced = metrics.predictionLabel !== "WAITING";
 
   const cards = [
     {
       label: "Motion Score",
-      value: metrics.motionScore.toFixed(1),
-      unit: "%",
+      value: isHandPlaced ? metrics.motionScore.toFixed(1) : "--",
+      unit: isHandPlaced ? "%" : undefined,
       icon: Activity,
-      progress: metrics.motionScore,
-      trend: metrics.motionScore > 80 ? "up" : "down",
-      trendValue: `${metrics.motionScore > 80 ? "+" : ""}${(metrics.motionScore - 80).toFixed(1)}%`,
+      progress: isHandPlaced ? metrics.motionScore : 0,
+      trend: isHandPlaced ? (metrics.motionScore > 80 ? "up" : "down") : "neutral",
+      trendValue: isHandPlaced 
+        ? `${metrics.motionScore > 80 ? "+" : ""}${(metrics.motionScore - 80).toFixed(1)}%` 
+        : "Awaiting hand...",
       color: "cyan",
       description: "Frame differencing velocity",
       index: 0,
     },
     {
       label: "Blur Score",
-      value: metrics.blurScore.toFixed(1),
-      unit: "%",
+      value: isHandPlaced ? metrics.blurScore.toFixed(1) : "--",
+      unit: isHandPlaced ? "%" : undefined,
       icon: Eye,
-      progress: metrics.blurScore,
-      trend: metrics.blurScore > 85 ? "up" : "neutral",
-      trendValue: metrics.blurScore > 85 ? "High clarity" : "Low clarity",
+      progress: isHandPlaced ? metrics.blurScore : 0,
+      trend: isHandPlaced ? (metrics.blurScore > 85 ? "up" : "neutral") : "neutral",
+      trendValue: isHandPlaced 
+        ? (metrics.blurScore > 85 ? "High clarity" : "Low clarity") 
+        : "Awaiting hand...",
       color: "blue",
       description: "Laplacian variance · ROI sharpness",
       index: 1,
     },
     {
       label: "Finger Movement",
-      value: metrics.fingerMovement.toFixed(1),
-      unit: "%",
+      value: isHandPlaced ? metrics.fingerMovement.toFixed(1) : "--",
+      unit: isHandPlaced ? "%" : undefined,
       icon: Hand,
-      progress: metrics.fingerMovement,
-      trend: metrics.fingerMovement > 65 ? "up" : "down",
-      trendValue: "5-finger tracked",
+      progress: isHandPlaced ? metrics.fingerMovement : 0,
+      trend: isHandPlaced ? (metrics.fingerMovement > 65 ? "up" : "down") : "neutral",
+      trendValue: isHandPlaced ? "Tracking fingers" : "Awaiting hand...",
       color: "purple",
       description: "Multi-fingertip landmark delta",
       index: 2,
     },
     {
       label: "Valid Frames",
-      value: metrics.validFrames,
-      unit: "frames",
+      value: isHandPlaced ? metrics.validFrames : "--",
+      unit: isHandPlaced ? "frames" : undefined,
       icon: CheckSquare,
-      progress: Math.min((metrics.validFrames / 300) * 100, 100),
-      trend: "up",
-      trendValue: `${((metrics.validFrames / 300) * 100).toFixed(0)}%`,
+      progress: isHandPlaced ? Math.min((metrics.validFrames / 30) * 100, 100) : 0,
+      trend: isHandPlaced ? "up" : "neutral",
+      trendValue: isHandPlaced ? `${((metrics.validFrames / 30) * 100).toFixed(0)}%` : "Awaiting hand...",
       color: "green",
       description: "Quality-passed frame count",
       index: 3,
     },
     {
       label: "Confidence Score",
-      value: metrics.confidenceScore.toFixed(1),
-      unit: "%",
+      value: isHandPlaced ? metrics.confidenceScore.toFixed(1) : "--",
+      unit: isHandPlaced ? "%" : undefined,
       icon: Target,
-      progress: metrics.confidenceScore,
-      trend: metrics.confidenceScore > 90 ? "up" : "neutral",
-      trendValue: metrics.confidenceScore > 90 ? "High conf." : "Medium",
+      progress: isHandPlaced ? metrics.confidenceScore : 0,
+      trend: isHandPlaced ? (metrics.confidenceScore > 90 ? "up" : "neutral") : "neutral",
+      trendValue: isHandPlaced ? (metrics.confidenceScore > 90 ? "High conf." : "Medium") : "Awaiting hand...",
       color: "amber",
       description: "Model prediction probability",
       index: 4,
@@ -94,9 +104,13 @@ export default function MetricsGrid() {
       label: "Prediction Label",
       value: metrics.predictionLabel,
       icon: Tag,
-      trend: metrics.predictionLabel === "REAL" ? "up" : "down",
-      trendValue: metrics.predictionLabel === "REAL" ? "Authentic" : "Attack",
-      color: metrics.predictionLabel === "REAL" ? "green" : "red",
+      trend: isHandPlaced ? (metrics.predictionLabel === "REAL" ? "up" : "neutral") : "neutral",
+      trendValue: isHandPlaced 
+        ? (metrics.predictionLabel === "REAL" ? "Authentic" : "Analyzing/Attack") 
+        : "Place hand in camera feed",
+      color: isHandPlaced 
+        ? (metrics.predictionLabel === "REAL" ? "green" : "red") 
+        : "cyan",
       description: "hand_model.pkl classification",
       index: 5,
     },

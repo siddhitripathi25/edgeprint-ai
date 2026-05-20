@@ -15,8 +15,10 @@ export default function Navbar() {
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const timer = setInterval(() => {
       setTime(new Date());
       setUptime((u) => u + 1);
@@ -38,19 +40,23 @@ export default function Navbar() {
     return () => window.removeEventListener("edgeprint_state_change", updateLocalState);
   }, []);
 
-  const timeStr = time.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
+  const timeStr = mounted
+    ? time.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+    : "--:--:--";
 
-  const dateStr = time.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const dateStr = mounted
+    ? time.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "--- --, ----";
 
   const getLogIcon = (type: LogEntry["type"]) => {
     switch (type) {
