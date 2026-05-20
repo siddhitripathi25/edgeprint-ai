@@ -16,6 +16,16 @@ export default function LiveCameraFeed() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Automatically default to Cloud Stream Mode if hosted remotely (production deploy)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isRemote = !window.location.hostname.includes("localhost") && !window.location.hostname.includes("127.0.0.1");
+      if (isRemote) {
+        setUseCloudStream(true);
+      }
+    }
+  }, []);
+
   // Sync with global simulated state
   useEffect(() => {
     const handleStateChange = () => {
@@ -134,9 +144,6 @@ export default function LiveCameraFeed() {
           audio: false,
         });
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
         setCameraActive(true);
         addSimulatedLog("info", "Webcam Enabled", "Direct browser camera capture initialized");
       } catch (err) {
@@ -145,6 +152,13 @@ export default function LiveCameraFeed() {
       }
     }
   };
+
+  // Attach the media stream to the video element once it is mounted in the DOM
+  useEffect(() => {
+    if (cameraActive && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [cameraActive, useCloudStream]);
 
   // Cleanup webcam stream on unmount
   useEffect(() => {
