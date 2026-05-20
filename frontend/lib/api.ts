@@ -227,6 +227,8 @@ export async function predictFrame(imageBase64: string, label: string = "user1")
   confidence: number;
   blur_score: number;
   motion_score: number;
+  finger_movement?: number;
+  valid_frames?: number;
   error?: string;
 }> {
   try {
@@ -244,6 +246,8 @@ export async function predictFrame(imageBase64: string, label: string = "user1")
       confidence: 0.0,
       blur_score: 0.0,
       motion_score: 0.0,
+      finger_movement: 0.0,
+      valid_frames: 0,
       error: e.message || "Failed to reach server",
     };
   }

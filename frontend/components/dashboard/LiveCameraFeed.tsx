@@ -93,8 +93,8 @@ export default function LiveCameraFeed() {
               metrics: {
                 motionScore: res.motion_score,
                 blurScore: res.blur_score,
-                fingerMovement: res.hand_detected ? 90.0 : 0.0,
-                validFrames: res.hand_detected ? Math.min(prev.metrics.validFrames + 1, 30) : 0,
+                fingerMovement: res.finger_movement || 0.0,
+                validFrames: res.valid_frames || 0,
                 confidenceScore: res.confidence,
                 predictionLabel: res.prediction,
                 timestamp: new Date().toLocaleTimeString()
