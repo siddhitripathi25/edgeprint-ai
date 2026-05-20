@@ -13,7 +13,7 @@ let isAlive = false;
 async function checkConnection(): Promise<boolean> {
   try {
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 1000);
+    const id = setTimeout(() => controller.abort(), 8000); // 8 seconds timeout to allow sleeping Render instances to wake up
     const res = await fetch(`${BASE_URL}/status`, { signal: controller.signal });
     clearTimeout(id);
     const alive = res.ok;
@@ -39,7 +39,7 @@ if (typeof window !== "undefined") {
 
 // --- GET /status ---
 export async function getStatus(): Promise<StatusResponse> {
-  const connected = await checkConnection();
+  const connected = isAlive;
   if (connected) {
     try {
       const res = await fetch(`${BASE_URL}/status`);

@@ -120,8 +120,52 @@ export default function LiveCameraFeed() {
     };
   }, [cameraActive, useCloudStream, isBackendConnected]);
 
+  useEffect(() => {
+    if (!cameraActive || isBackendConnected) return;
 
-  // Handle webcam start / stop
+    let frameCount = 0;
+    let indexPrevX = 0;
+    const interval = setInterval(() => {
+      frameCount = (frameCount + 1) % 300;
+      
+      const simulatedMotion = 10 + Math.random() * 80;
+      const simulatedBlur = 75 + Math.random() * 20;
+      
+      const currentX = 100 + Math.sin(frameCount / 10) * 50;
+      const fingerDelta = indexPrevX > 0 ? Math.abs(currentX - indexPrevX) : 0.0;
+      indexPrevX = currentX;
+      
+      const validFramesCount = Math.min(frameCount, 30);
+      
+      let simulatedLabel = "PROCESSING";
+      let confidence = 0.0;
+      let status: VerificationStatus = "PROCESSING";
+      
+      if (validFramesCount >= 30) {
+        simulatedLabel = "USER1";
+        confidence = 94.6 + Math.random() * 4;
+        status = "REAL_USER_VERIFIED";
+      }
+      
+      setSimulatedState((prev) => ({
+        ...prev,
+        status: status,
+        metrics: {
+          motionScore: simulatedMotion,
+          blurScore: simulatedBlur,
+          fingerMovement: fingerDelta * 2,
+          validFrames: validFramesCount,
+          confidenceScore: confidence,
+          predictionLabel: simulatedLabel,
+          timestamp: new Date().toLocaleTimeString()
+        }
+      }));
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [cameraActive, isBackendConnected]);
+
+
   const toggleCamera = async () => {
     if (cameraActive) {
       if (streamRef.current) {
@@ -153,7 +197,6 @@ export default function LiveCameraFeed() {
     }
   };
 
-  // Attach the media stream to the video element once it is mounted in the DOM
   useEffect(() => {
     if (cameraActive && streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current;
