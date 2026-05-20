@@ -79,10 +79,10 @@ export default function Sidebar() {
 
   return (
     <motion.aside
-      animate={{ width: collapsed ? 72 : 240 }}
+      animate={{ width: collapsed ? 72 : 210 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="relative flex h-screen flex-col border-r border-[#1a2744] bg-[#07090f]/95 backdrop-blur-xl"
-      style={{ minWidth: collapsed ? 72 : 240 }}
+      className="relative z-20 flex h-screen flex-col border-r border-[#1a2744] bg-[#07090f]/95 backdrop-blur-xl"
+      style={{ minWidth: collapsed ? 72 : 210 }}
     >
       {/* Logo / Brand */}
       <div className="flex h-16 items-center justify-between border-b border-[#1a2744] px-4">
@@ -120,13 +120,7 @@ export default function Sidebar() {
         </AnimatePresence>
       </div>
 
-      {/* Collapse Toggle */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-[72px] z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[#1a2744] bg-[#0a0f1e] text-gray-400 transition-colors hover:border-cyan-400/40 hover:text-cyan-400"
-      >
-        {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
-      </button>
+
 
       {/* System status pill */}
       {!collapsed && (

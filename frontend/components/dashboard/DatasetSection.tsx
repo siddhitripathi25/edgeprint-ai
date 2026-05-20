@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Save, Play, Search, Trash2, CheckCircle2, AlertCircle } from "lucide-react";
 import { saveTemplate, startTraining, predictUser, clearDataset } from "@/lib/api";
+import { getSimulatedState, setSimulatedState, addSimulatedLog } from "@/lib/mock-data";
 import GlowCard from "@/components/ui/GlowCard";
 import type { ActionState } from "@/types";
 
@@ -15,7 +16,6 @@ export default function DatasetSection() {
   });
   const [templateLabel, setTemplateLabel] = useState<string>("user1");
   const [message, setMessage] = useState<string>("");
-
 
   const runAction = async (key: keyof ActionState, fn: () => Promise<{ success: boolean; message: string }>) => {
     setActions((prev) => ({ ...prev, [key]: "loading" }));
@@ -40,26 +40,112 @@ export default function DatasetSection() {
     }
   };
 
-  const handleSaveTemplate = () => runAction("saveTemplate", () => saveTemplate(templateLabel));
-  const handleStartTraining = () => runAction("startTraining", startTraining);
+  const handleSaveTemplate = async () => {
+    const state = getSimulatedState();
+    if (!state.isBackendConnected) {
+      setActions((prev) => ({ ...prev, saveTemplate: "loading" }));
+      setMessage("");
+      setTimeout(() => {
+        setActions((prev) => ({ ...prev, saveTemplate: "success" }));
+        setMessage(`[SIMULATOR] Template saved under label '${templateLabel}'`);
+        setSimulatedState((prevS) => ({
+          ...prevS,
+          modelInfo: {
+            ...prevS.modelInfo,
+            datasetSize: prevS.modelInfo.datasetSize + 1,
+          }
+        }));
+        addSimulatedLog("info", "Template Saved", `Dataset template saved locally with label '${templateLabel}'`);
+        setTimeout(() => setActions((prev) => ({ ...prev, saveTemplate: "idle" })), 3000);
+      }, 1000);
+    } else {
+      runAction("saveTemplate", () => saveTemplate(templateLabel));
+    }
+  };
+
+  const handleStartTraining = async () => {
+    const state = getSimulatedState();
+    if (!state.isBackendConnected) {
+      setActions((prev) => ({ ...prev, startTraining: "loading" }));
+      setMessage("");
+      setTimeout(() => {
+        setActions((prev) => ({ ...prev, startTraining: "success" }));
+        const newAcc = 95.0 + Math.random() * 4;
+        setMessage(`[SIMULATOR] Classifier retrained! Accuracy: ${newAcc.toFixed(1)}%`);
+        setSimulatedState((prevS) => {
+          const vParts = prevS.modelInfo.version.split(".");
+          const nextV = `${vParts[0]}.${vParts[1]}.${parseInt(vParts[2]) + 1}`;
+          return {
+            ...prevS,
+            modelInfo: {
+              ...prevS.modelInfo,
+              accuracy: parseFloat(newAcc.toFixed(1)),
+              version: nextV,
+              lastTrained: new Date().toISOString(),
+            }
+          };
+        });
+        addSimulatedLog("success", "Training Completed", `Random Forest retrained successfully. Accuracy: ${newAcc.toFixed(1)}%`);
+        setTimeout(() => setActions((prev) => ({ ...prev, startTraining: "idle" })), 3000);
+      }, 2000);
+    } else {
+      runAction("startTraining", startTraining);
+    }
+  };
+
   const handlePredictUser = async () => {
     setActions((prev) => ({ ...prev, predictUser: "loading" }));
     setMessage("");
-    try {
-      const res = await predictUser();
-      setActions((prev) => ({ ...prev, predictUser: "success" }));
-      setMessage(`Prediction: ${res.prediction} (Confidence: ${res.confidence.toFixed(1)}%)`);
-    } catch (e) {
-      console.error(e);
-      setActions((prev) => ({ ...prev, predictUser: "error" }));
-      setMessage("Prediction failed. Model not trained?");
-    } finally {
+    const state = getSimulatedState();
+    if (!state.isBackendConnected) {
       setTimeout(() => {
-        setActions((prev) => ({ ...prev, predictUser: "idle" }));
-      }, 4000);
+        setActions((prev) => ({ ...prev, predictUser: "success" }));
+        const users = ["USER1", "USER2", "SPOOF_BLUR", "SPOOF_STATIC"];
+        const randUser = users[Math.floor(Math.random() * users.length)];
+        const randConf = 85 + Math.random() * 15;
+        setMessage(`[SIMULATOR] Prediction: ${randUser} (Confidence: ${randConf.toFixed(1)}%)`);
+        addSimulatedLog("info", "User Classified", `Classification result: ${randUser} (${randConf.toFixed(1)}%)`);
+        setTimeout(() => setActions((prev) => ({ ...prev, predictUser: "idle" })), 4000);
+      }, 1200);
+    } else {
+      try {
+        const res = await predictUser();
+        setActions((prev) => ({ ...prev, predictUser: "success" }));
+        setMessage(`Prediction: ${res.prediction} (Confidence: ${res.confidence.toFixed(1)}%)`);
+      } catch (e) {
+        console.error(e);
+        setActions((prev) => ({ ...prev, predictUser: "error" }));
+        setMessage("Prediction failed. Model not trained?");
+      } finally {
+        setTimeout(() => {
+          setActions((prev) => ({ ...prev, predictUser: "idle" }));
+        }, 4000);
+      }
     }
   };
-  const handleClearDataset = () => runAction("clearDataset", clearDataset);
+
+  const handleClearDataset = async () => {
+    const state = getSimulatedState();
+    if (!state.isBackendConnected) {
+      setActions((prev) => ({ ...prev, clearDataset: "loading" }));
+      setMessage("");
+      setTimeout(() => {
+        setActions((prev) => ({ ...prev, clearDataset: "success" }));
+        setMessage("[SIMULATOR] CSV dataset cleared successfully.");
+        setSimulatedState((prevS) => ({
+          ...prevS,
+          modelInfo: {
+            ...prevS.modelInfo,
+            datasetSize: 0,
+          }
+        }));
+        addSimulatedLog("warning", "Dataset Cleared", "Landmark templates CSV dataset wiped by operator");
+        setTimeout(() => setActions((prev) => ({ ...prev, clearDataset: "idle" })), 3000);
+      }, 1000);
+    } else {
+      runAction("clearDataset", clearDataset);
+    }
+  };
 
   return (
     <GlowCard glowColor="cyan" className="p-4">

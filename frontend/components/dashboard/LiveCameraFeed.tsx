@@ -16,7 +16,6 @@ export default function LiveCameraFeed() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Automatically default to Cloud Stream Mode if hosted remotely (production deploy)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const isRemote = !window.location.hostname.includes("localhost") && !window.location.hostname.includes("127.0.0.1");
@@ -26,13 +25,11 @@ export default function LiveCameraFeed() {
     }
   }, []);
 
-  // Sync with global simulated state
   useEffect(() => {
     const handleStateChange = () => {
       const state = getSimulatedState();
       setStatus(state.status);
       
-      // Release browser camera lock if backend is connected and not cloud-streaming
       if (state.isBackendConnected && !useCloudStream && streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
@@ -229,14 +226,12 @@ export default function LiveCameraFeed() {
   return (
     <GlowCard glowColor="cyan" className="overflow-hidden">
       <div className="p-4">
-        {/* Header */}
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Camera className="h-4 w-4 text-cyan-400" />
             <span className="text-sm font-semibold text-white">Live Camera Feed</span>
           </div>
           <div className="flex items-center gap-2">
-            {/* Cloud Stream Toggle */}
             {isBackendConnected && (
               <button
                 onClick={() => setUseCloudStream(!useCloudStream)}
@@ -250,8 +245,6 @@ export default function LiveCameraFeed() {
                 {useCloudStream ? "CLOUD STREAM ON" : "LOCAL CAMERA HARDWARE"}
               </button>
             )}
-
-            {/* Connection mode */}
             <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded border ${
               isBackendConnected 
                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
@@ -259,8 +252,6 @@ export default function LiveCameraFeed() {
             }`}>
               {isBackendConnected ? "FASTAPI MODE" : "SIMULATION MODE"}
             </span>
-
-            {/* LIVE badge */}
             <div className="flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
@@ -269,7 +260,6 @@ export default function LiveCameraFeed() {
               <span className="font-mono text-[10px] font-bold tracking-widest text-red-400">LIVE</span>
             </div>
             
-            {/* Camera power toggle */}
             <button
               onClick={toggleCamera}
               className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-all ${
@@ -283,10 +273,7 @@ export default function LiveCameraFeed() {
             </button>
           </div>
         </div>
-
-        {/* Camera viewport */}
         <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-cyan-500/20 bg-[#030a14]">
-          {/* Real video element or Backend MJPEG stream */}
           {cameraActive && (
             isBackendConnected && !useCloudStream ? (
               <img
@@ -304,9 +291,6 @@ export default function LiveCameraFeed() {
               />
             )
           )}
-
-
-          {/* Animated border glow */}
           <div className="pointer-events-none absolute inset-0 rounded-lg"
             style={{
               boxShadow: status === "REAL_USER_VERIFIED" ? "inset 0 0 40px rgba(34, 197, 94, 0.25)" :
@@ -319,8 +303,6 @@ export default function LiveCameraFeed() {
                       "1px solid rgba(0, 245, 255, 0.15)",
             }}
           />
-
-          {/* Scan line animation */}
           {cameraActive && (
             <div className="pointer-events-none absolute left-0 right-0 h-[2px] overflow-hidden"
               style={{
@@ -329,8 +311,6 @@ export default function LiveCameraFeed() {
               }}
             />
           )}
-
-          {/* Corner brackets */}
           {[
             "top-2 left-2 border-t border-l",
             "top-2 right-2 border-t border-r",
@@ -343,8 +323,6 @@ export default function LiveCameraFeed() {
               "border-cyan-400/60"
             }`} />
           ))}
-
-          {/* Grid overlay */}
           <div
             className="absolute inset-0 opacity-15"
             style={{
@@ -355,8 +333,6 @@ export default function LiveCameraFeed() {
               backgroundSize: "40px 40px",
             }}
           />
-
-          {/* Center content — webcam placeholder */}
           {!cameraActive && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
               <div className="flex h-20 w-20 items-center justify-center rounded-full border border-cyan-500/30 bg-cyan-500/5">
@@ -370,8 +346,6 @@ export default function LiveCameraFeed() {
               </div>
             </div>
           )}
-
-          {/* Hand ROI box wrapper */}
           {cameraActive && status !== "WAITING_FOR_HAND" && (
             <div className={`pointer-events-none absolute left-[30%] top-[20%] h-[60%] w-[40%] rounded border-2 transition-all duration-300 ${
               status === "REAL_USER_VERIFIED" ? "border-emerald-400/60 bg-emerald-500/5" :
@@ -387,8 +361,6 @@ export default function LiveCameraFeed() {
                 {status === "SPOOF_DETECTED" && "SPOOF ATTACK BLOCK"}
                 {status === "PROCESSING" && "ANALYZING HAND"}
               </div>
-
-              {/* Fingertips tracked markers */}
               {[
                 { x: "20%", y: "25%", name: "INDEX" },
                 { x: "45%", y: "15%", name: "MIDDLE" },
@@ -410,8 +382,6 @@ export default function LiveCameraFeed() {
               ))}
             </div>
           )}
-
-          {/* Bottom stats overlay bar */}
           {cameraActive && (
             <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between border-t border-cyan-500/10 bg-black/75 px-3 py-1.5 backdrop-blur-sm">
               <div className="flex items-center gap-3">
@@ -436,8 +406,6 @@ export default function LiveCameraFeed() {
             </div>
           )}
         </div>
-
-        {/* Live Simulator Control Panel (renders when FastAPI backend is disconnected to allow demonstration) */}
         {!isBackendConnected && (
           <div className="mt-4 rounded-lg border border-[#1a2744] bg-[#07090f] p-3">
             <p className="mb-2 font-mono text-[10px] font-bold tracking-wider text-gray-500 uppercase">
